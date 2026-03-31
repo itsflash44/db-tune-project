@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ NOVA — Autonomous DBA Optimization Agent
+# ⚡ NOVA — Autonomous DBA Optimization Agent [Team:[Vansh sahu(sahuvansh781@gmail.com),Bhuvnesh Sharma(26f1001154@ds.study.iitm.ac.in),Tirth trivedi ( tirthtrivedi01@gmail.com)]]
 
 ### 🏆 Scalor × Meta PyTorch × Hugging Face Hackathon
 
