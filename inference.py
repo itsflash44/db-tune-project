@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import urllib.request
 from openai import OpenAI
 from client import DBEnvClient, DBAction
 
@@ -11,12 +12,17 @@ API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "dummy_key")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
 SYSTEM_PROMPT = """You are a Senior DBA Agent named NOVA. Your goal is to minimize query cost.
+
+VALID COLUMNS (ONLY these are allowed for CREATE — use exact spelling):
+  department, salary, location, active_status
+
 Available Commands MUST be exactly one of these JSON formats:
-1. {"thought_process": "...", "command": "DROP", "table_name": "users", "column_name": "idx_name"}
-2. {"thought_process": "...", "command": "CREATE", "table_name": "users", "column_name": "dept"}
+1. {"thought_process": "...", "command": "DROP", "table_name": "users", "column_name": "<existing_index_name>"}
+2. {"thought_process": "...", "command": "CREATE", "table_name": "users", "column_name": "<one_of_the_valid_columns_above>"}
 3. {"thought_process": "...", "command": "FINISH", "table_name": "", "column_name": ""}
 
 STRATEGY & CONSTRAINTS:
+- COLUMNS: For CREATE, column_name MUST be one of: department, salary, location, active_status
 - CALCULATE: Use 'thought_process' to verify storage_budget before every action.
 - PRECISION: Use only single-column indices. Do not use composite keys.
 - EFFICIENCY: If Query Cost <= 10.0, output "FINISH" immediately.
@@ -39,13 +45,24 @@ def extract_json(text):
         # Graceful failure: If JSON is unparseable, tell the agent to stop safely
         return {"thought_process": "CRITICAL: LLM Parsing Error", "command": "FINISH"}
 
+BASE_URL = os.getenv("ENV_BASE_URL", "https://itsflash44-db-tune-env.hf.space")
+
+def fetch_active_query() -> str:
+    """
+    Autonomously fetches the active SQL query from the environment server.
+    Falls back gracefully if the server is unreachable.
+    """
+    try:
+        with urllib.request.urlopen(f"{BASE_URL}/query", timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+            return data.get("query", "")
+    except Exception:
+        return ""  # Silently fall back — handled gracefully below
+
 def main():
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
     
-    # Live deployment URL for Team NOVA
-    env = DBEnvClient(
-        base_url="https://itsflash44-db-tune-env.hf.space",
-    )
+    env = DBEnvClient(base_url=BASE_URL)
     
     tasks = ["easy", "medium", "hard"]
     grand_total = 0.0 
@@ -64,20 +81,32 @@ def main():
             # Stateful memory: Agent remembers its context for the specific task
             conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-            query_hints = {
-                "easy": "SELECT * FROM users WHERE department = 'Sales'",
-                "medium": "SELECT * FROM users WHERE location = 'City_2' AND active_status = 1",
-                "hard": "SELECT * FROM users WHERE department = 'Engineering'"
-            }
-            current_query = query_hints.get(task_name, "Unknown")
+            # Autonomously discover the active query from the live environment server
+            current_query = fetch_active_query()
+            if not current_query:
+                # Fallback: use the server's own query_map values (matches environment.py exactly)
+                _fallback_queries = {
+                    "easy":   "SELECT * FROM users WHERE department = 'Dept_5'",
+                    "medium": "SELECT * FROM users WHERE location = 'City_2' AND active_status = 1",
+                    "hard":   "SELECT * FROM users WHERE department = 'Dept_9'"
+                }
+                current_query = _fallback_queries.get(task_name, "")
+                print(f"🔍 Query fetched from fallback map: {current_query}")
+            else:
+                print(f"🔍 Discovered target query from server: {current_query}")
 
             for step in range(1, 11):
                 if result.done:
                     print(f"✅ COMPLETED: Task {task_name} finalized.")
                     break
 
+                query_context = (
+                    f"Target Query: {current_query}."
+                    if current_query
+                    else "Target Query: Unknown — infer the optimal index from the current indices and cost."
+                )
                 user_prompt = (
-                    f"Task: {task_name}. Target Query: {current_query}. "
+                    f"Task: {task_name}. {query_context} "
                     f"Current Cost: {obs.query_cost}. "
                     f"Storage: {obs.storage_used}/{obs.storage_budget}. "
                     f"Indices: {obs.current_indices}. "

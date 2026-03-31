@@ -26,6 +26,10 @@ def read_root():
 def get_state():
     return env.get_state()
 
+@app.get("/query")
+def get_active_query():
+    return {"query": env.get_active_query()}
+
 @app.post("/reset")
 def reset_env(task_name: str = "easy"):
     with lock:

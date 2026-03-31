@@ -46,16 +46,21 @@ class DBEnvironment(Environment):
         cursor.executemany("INSERT INTO users VALUES (?, ?, ?, ?, ?)", data)
         self.conn.commit()
 
+    # Centralised query map — single source of truth for both cost calc and the agent
+    _query_map = {
+        "easy":   "SELECT * FROM users WHERE department = 'Dept_5'",
+        "medium": "SELECT * FROM users WHERE location = 'City_2' AND active_status = 1",
+        "hard":   "SELECT * FROM users WHERE department = 'Dept_9'"
+    }
+
+    def get_active_query(self) -> str:
+        """Return the SQL query being optimised in the current task."""
+        return self._query_map.get(self.current_task, self._query_map["easy"])
+
     def _get_query_cost(self) -> float:
         """Calculates Scan vs Index Search costs based on SQLite query plans."""
         cursor = self.conn.cursor()
-        
-        query_map = {
-            "easy": "SELECT * FROM users WHERE department = 'Dept_5'",
-            "medium": "SELECT * FROM users WHERE location = 'City_2' AND active_status = 1",
-            "hard": "SELECT * FROM users WHERE department = 'Dept_9'"
-        }
-        query = query_map.get(self.current_task, query_map["easy"])
+        query = self.get_active_query()
         
         try:
             cursor.execute(f"EXPLAIN QUERY PLAN {query}")
