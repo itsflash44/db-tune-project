@@ -1,7 +1,9 @@
 import os
 import re
 import json
+import time
 import urllib.request
+from datetime import datetime
 from openai import OpenAI
 from client import DBEnvClient, DBAction
 
@@ -47,6 +49,23 @@ def extract_json(text):
 
 BASE_URL = os.getenv("ENV_BASE_URL", "https://itsflash44-db-tune-env.hf.space")
 
+def call_llm_with_retry(client, model, messages, temperature, max_retries=3):
+    """
+    Exponential backoff retry for LLM API calls.
+    Ensures the agent survives transient network blips during demo.
+    """
+    for attempt in range(max_retries):
+        try:
+            return client.chat.completions.create(
+                model=model, messages=messages, temperature=temperature
+            )
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            wait = 2 ** attempt  # 1s, 2s, 4s
+            print(f"   ⚠️  LLM call failed (attempt {attempt+1}/{max_retries}): {e}. Retrying in {wait}s…")
+            time.sleep(wait)
+
 def fetch_active_query() -> str:
     """
     Autonomously fetches the active SQL query from the environment server.
@@ -68,15 +87,17 @@ def main():
     grand_total = 0.0 
     max_possible = 3.2
     
+    task_results = {}
     with env.sync() as sync_env:
         for task_name in tasks:
             print(f"\n{'='*40}")
             print(f"🚀 MISSION START: {task_name.upper()} TIER")
             print(f"{'='*40}")
-            
+            task_start = time.time()
             result = sync_env.reset(task=task_name)
             obs = result.observation
             total_reward = 0.0
+            steps_taken = 0
             
             # Stateful memory: Agent remembers its context for the specific task
             conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -116,10 +137,8 @@ def main():
                 conversation_history.append({"role": "user", "content": user_prompt})
 
                 try:
-                    completion = client.chat.completions.create(
-                        model=MODEL_NAME,
-                        messages=conversation_history,
-                        temperature=0.1 # Lower temperature = higher precision for JSON
+                    completion = call_llm_with_retry(
+                        client, MODEL_NAME, conversation_history, temperature=0.1
                     )
                     
                     raw_content = completion.choices[0].message.content
@@ -139,15 +158,24 @@ def main():
                     result = sync_env.step(action)
                     obs = result.observation
                     total_reward += result.reward
+                    steps_taken += 1
                     print(f"   ↳ Progress: Cost optimized to {obs.query_cost}. Reward: {result.reward:.2f}")
 
                 except Exception as e:
                     print(f"❌ LOGISTICAL ERROR in {task_name}: {e}")
                     break
         
+            duration = round(time.time() - task_start, 2)
+            task_results[task_name] = {
+                "reward": round(total_reward, 2),
+                "final_cost": obs.query_cost,
+                "steps": steps_taken,
+                "success": obs.query_cost <= 10.0,
+                "duration_sec": duration
+            }
             print(f"\n--- {task_name.upper()} SUMMARY ---")
             print(f"Status: {'✅ SUCCESS' if obs.query_cost <= 10.0 else '⚠️ PARTIAL'}")
-            print(f"Points Gained: {total_reward:.2f}")
+            print(f"Points Gained: {total_reward:.2f}  |  Steps: {steps_taken}  |  Time: {duration}s")
             print(f"{'='*40}\n")
             grand_total += total_reward
 
@@ -159,6 +187,19 @@ def main():
     else:
         print("Final Verdict: 🥈 AUTOMATION VERIFIED")
     print(f"{'='*40}\n")
+
+    # Export machine-readable results for dashboards and judge review
+    report = {
+        "timestamp": datetime.now().isoformat(),
+        "model": MODEL_NAME,
+        "total_score": round(grand_total, 2),
+        "max_score": max_possible,
+        "tier": "SOVEREIGN_AI" if grand_total >= 3.0 else "AUTOMATION_VERIFIED",
+        "tasks": task_results
+    }
+    with open("results.json", "w") as f:
+        json.dump(report, f, indent=2)
+    print(f"📄 Results exported to results.json")
 
 if __name__ == "__main__":
     main()
