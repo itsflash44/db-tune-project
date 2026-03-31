@@ -1,0 +1,3 @@
+name: db_tune_env
+version: "1.0.0"
+description: "An autonomous database optimization environment where an agent acts as a Senior DBA, optimizing SQL queries by creating indices within a strict storage budget."
