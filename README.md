@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ NOVA — Autonomous DBA Optimization Agent [Team:[Vansh sahu(sahuvansh781@gmail.com),Bhuvnesh Sharma(26f1001154@ds.study.iitm.ac.in),Tirth trivedi ( tirthtrivedi01@gmail.com)]]
+# ⚡ NOVA — Autonomous DBA Optimization Agent
 
 ### 🏆 Scalor × Meta PyTorch × Hugging Face Hackathon
 
@@ -105,16 +105,20 @@ The agent maintains a rolling `conversation_history` array through all 10 steps.
 ### 5. 🧵 Thread-Safe Atomic Environment
 The FastAPI server uses `threading.Lock()` for every state-mutating operation. This prevents race conditions during concurrent judge evaluations — critical in multi-evaluator hackathon environments.
 
+### 6. 🔄 Exponential Backoff Retry
+Every LLM API call is wrapped in a `call_llm_with_retry()` helper with `1s → 2s → 4s` backoff. The agent survives transient network failures silently — no crashes during a live demo.
+
 ---
 
 ## 📂 Repository Structure
 
 ```
 db_tune_project/
-├── inference.py          # Core agent loop, CoT prompt, autonomous query discovery
+├── inference.py          # Core agent loop, CoT prompt, retry logic, results export
 ├── client.py             # OpenEnv client interface & type-safe action builder
 ├── models.py             # Pydantic types: DBAction, DBObservation, DBState
-├── ui_demo.py            # Streamlit telemetry dashboard (subprocess-isolated)
+├── ui_demo.py            # Streamlit real-time dashboard (Plotly charts, KPI cards)
+├── results.json          # Auto-generated score report after each run
 ├── server/
 │   ├── app.py            # FastAPI server + GET /query endpoint
 │   └── environment.py    # SQLite simulation, EXPLAIN QUERY PLAN scoring
