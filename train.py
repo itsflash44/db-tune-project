@@ -14,7 +14,11 @@ import logging
 import re
 import itertools
 from datetime import datetime
+import sys
 from pathlib import Path
+
+# Provide robust absolute import path so script can be run from anywhere
+sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
 import torch
 from datasets import Dataset
