@@ -1,3 +1,4 @@
+# Server + agent dependencies (installed in HF Space Docker)
 fastapi>=0.104.0
 uvicorn>=0.24.0
 openai>=1.0.0
@@ -5,10 +6,3 @@ pydantic>=2.0.0
 openenv-core>=0.1.13
 streamlit>=1.32.0
 plotly>=5.18.0
-# GRPO Training
-transformers>=4.40.0
-trl>=0.8.0
-peft>=0.10.0
-accelerate>=0.28.0
-datasets>=2.18.0
-torch>=2.2.0

@@ -70,6 +70,9 @@ Within 20 episodes, it learned to read query plans, identify missing indices, ve
 
 ## 📊 Training Results
 
+![GRPO Reward Curve](reward_curve.png)
+*Reinforcement Learning progress: The model starts making random index guesses (negative rewards) and quickly learns to execute the exact commands that reduce query cost by 90 points.*
+
 | Episode | Task | Query Cost | Reward | Key Action |
 |---------|------|-----------|--------|-----------|
 | 1 | Easy | 100.0 | -0.40 | CREATE dept *(invalid column — learns fast)* |
