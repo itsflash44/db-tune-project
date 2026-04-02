@@ -81,6 +81,8 @@ Within 20 episodes, it learned to read query plans, identify missing indices, ve
 | 20 | Hard | 10.0 | +1.50 | DROP idx_useless → CREATE department |
 | **Final** | **All** | **10.0** | **+3.00/3.20** | **1 step per task** |
 
+*Note: The table above reflects the step-by-step evaluation of the **production 72B agent** (`inference.py`), not the 1.5B training run in the chart above.*
+
 > The agent discovered that `dept` was invalid *by failing*, then corrected itself — without any hint about valid column names being in its training data.
 
 **On the reward curve:** The rolling mean peaks at step ~8 then plateaus — this is expected GRPO behavior, not overfitting. The model quickly learns the dominant pattern (CREATE on the WHERE clause column), then reward variance increases as it explores harder tasks (medium, hard) that require DROP+CREATE reasoning. 30 steps is a "proof of learning" run that fits on a free T4 in ~30 minutes. Full convergence requires ~150-200 steps; even at 30 steps the model's single-step index selection improved measurably over the random baseline.
@@ -234,7 +236,7 @@ Step 1 | Action: CREATE on [department]
 | **GRPO over PPO** | No value network needed — computes advantages from reward groups directly |
 | **1.5B for training, 72B for production** | Training fits on free Colab GPU; production uses best available reasoning |
 | **LoRA r=16** | 3.6M trainable params vs 1.5B total — full expressiveness at minimal memory |
-| **3.00/3.20 not 3.20** | Deliberate: agent avoids index churn (DROP+CREATE loops) which spike CPU in real DBAs |
+| **3.00/3.20 not 3.20** | Production agent uses the 72B model; the 0.2 gap reflects one sub-optimal step on the hard tier. |
 | **Qwen2.5 family** | Superior JSON instruction-following vs GPT-equivalent models at same size |
 
 ---
