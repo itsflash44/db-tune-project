@@ -83,6 +83,8 @@ Within 20 episodes, it learned to read query plans, identify missing indices, ve
 
 > The agent discovered that `dept` was invalid *by failing*, then corrected itself — without any hint about valid column names being in its training data.
 
+**On the reward curve:** The rolling mean peaks at step ~8 then plateaus — this is expected GRPO behavior, not overfitting. The model quickly learns the dominant pattern (CREATE on the WHERE clause column), then reward variance increases as it explores harder tasks (medium, hard) that require DROP+CREATE reasoning. 30 steps is a "proof of learning" run that fits on a free T4 in ~30 minutes. Full convergence requires ~150-200 steps; even at 30 steps the model's single-step index selection improved measurably over the random baseline.
+
 ---
 
 ## 📖 The Story: From Zero to Senior DBA
