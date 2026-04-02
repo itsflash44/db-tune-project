@@ -14,6 +14,7 @@ dependencies = [
     "openenv-core>=0.1.13",
     "streamlit",
     "plotly>=5.18.0"
+    # Training deps are in requirements-train.txt (not installed in HF Space)
 ]
 
 [tool.setuptools.packages.find]

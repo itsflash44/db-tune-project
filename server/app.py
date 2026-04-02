@@ -4,12 +4,12 @@ from typing import List, Optional
 import os
 import json
 import threading
-from environment import DatabaseEnvironment
+from .environment import DBEnvironment
 
 app = FastAPI(title="OpenEnv Simulation Server")
 
 # Global environment and thread-safety lock
-env = DatabaseEnvironment()
+env = DBEnvironment()
 lock = threading.Lock()
 
 class DBAction(BaseModel):
