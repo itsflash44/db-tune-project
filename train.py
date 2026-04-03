@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 MODEL_ID        = os.environ.get("TRAIN_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
-NUM_EPISODES    = int(os.environ.get("NUM_EPISODES", "30"))
+NUM_EPISODES    = int(os.environ.get("NUM_EPISODES", "200"))
 NUM_GENERATIONS = int(os.environ.get("NUM_GENERATIONS", "4"))
 HF_REPO         = os.environ.get("HF_REPO", "")
 
