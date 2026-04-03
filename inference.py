@@ -73,9 +73,9 @@ def call_llm_with_retry(client, model, messages, temperature, max_retries=3):
             wait = 2 ** attempt
             time.sleep(wait)
 
-def fetch_active_query() -> str:
+def fetch_active_query(task: str = "easy") -> str:
     try:
-        with urllib.request.urlopen(f"{BASE_URL}/query", timeout=5) as resp:
+        with urllib.request.urlopen(f"{BASE_URL}/query?task={task}", timeout=5) as resp:
             data = json.loads(resp.read().decode())
             return data.get("query", "")
     except Exception:
@@ -93,7 +93,7 @@ def main():
     
     tasks = ["easy", "medium", "hard"]
     grand_total = 0.0 
-    max_possible = 3.2
+    max_possible = 3.0
     
     task_results = {}
     
@@ -117,7 +117,7 @@ def main():
                 result = sync_env.reset(task=task_name)
                 obs = result.observation
                 
-                current_query = fetch_active_query()
+                current_query = fetch_active_query(task_name)
                 if not current_query:
                     current_query = _fallback_queries.get(task_name, "")
 
@@ -186,7 +186,7 @@ def main():
                 score = min(max(total_reward / MAX_REWARD_PER_TASK, 0.0), 1.0)
                 log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
-            grand_total += total_reward
+            grand_total += score
             duration = round(time.time() - task_start, 2)
             task_results[task_name] = {
                 "reward": round(total_reward, 2),

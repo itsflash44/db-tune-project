@@ -18,7 +18,7 @@ class DBEnvironment(Environment):
         
         # 1. Strategic Budgets
         if task_type == "hard":
-            self.storage_budget = 2.0  # Forces a DROP/CREATE cycle
+            self.storage_budget = 1.0  # Forces a DROP/CREATE cycle
         elif task_type == "medium":
             self.storage_budget = 3.0
         else:

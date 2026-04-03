@@ -31,13 +31,51 @@ def _obs_to_payload(obs) -> dict:
 # REST Endpoints (used by hackathon checker & /query)
 # ─────────────────────────────────────────────────────────────
 
-@app.get("/")
+from fastapi.responses import HTMLResponse, PlainTextResponse
+import os
+
+@app.get("/raw_readme")
+def get_readme():
+    try:
+        with open("README.md", "r") as f:
+            return PlainTextResponse(f.read())
+    except Exception:
+        return PlainTextResponse("# Welcome to NOVA DBA Agent")
+
+@app.get("/", response_class=HTMLResponse)
 def read_root():
-    return {"status": "running", "environment": "OpenEnv Simulation"}
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>NOVA DBA Agent</title>
+        <script type="module" src="https://cdn.jsdelivr.net/gh/zerodevx/zero-md@2/dist/zero-md.min.js"></script>
+        <style>
+            body { background-color: #0d1117; padding: 40px 20px; margin: 0; font-family: sans-serif; }
+            .container { max-width: 900px; margin: 0 auto; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <zero-md src="/raw_readme">
+                <template>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css" />
+                    <style>
+                        .markdown-body { background: transparent !important; }
+                    </style>
+                </template>
+            </zero-md>
+        </div>
+    </body>
+    </html>
+    """
 
 @app.get("/query")
-def get_active_query():
+def get_active_query(task: Optional[str] = "easy"):
     tmp = DBEnvironment()
+    tmp.current_task = task
     return {"query": tmp.get_active_query()}
 
 
