@@ -148,6 +148,9 @@ We use GRPO (not PPO) because it requires no value network — it computes advan
 ### 7. 🔄 Exponential Backoff Retry
 All LLM calls use `call_llm_with_retry()` with `1s → 2s → 4s` backoff. The agent never crashes during a live demo.
 
+### 8. 🛑 Mathematic Storage Constraints
+The "Hard" tier mathematically enforces a `DROP` requirement. We cap the storage budget explicitly at `1.0` and inject an initial useless index (`1.0/1.0` used at initialization). This means the agent faces an absolute strict execution environment—if it attempts to `CREATE` without first dropping the useless index, the environment mathematically slaps it with a penalty and blocks the action. Our codebase actively prevents LLM "cheating".
+
 ---
 
 ## 🎯 Problem Statements Addressed
