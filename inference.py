@@ -161,12 +161,15 @@ def main():
                         done = result.done
                         error = None if not obs.message or obs.message == "Target optimization reached." else obs.message
 
-                        rewards.append(reward)
+                        # Clamp reward to 0.0-1.0 strictly for hackathon compliance
+                        log_reward = min(max(reward, 0.0), 1.0)
+                        
+                        rewards.append(log_reward)
                         steps_taken = step
                         
                         # --- [STEP]
                         action_str = f"{action.command}:{action.column_name}" if action.column_name else action.command
-                        log_step(step=step, action=action_str, reward=reward, done=done, error=error)
+                        log_step(step=step, action=action_str, reward=log_reward, done=done, error=error)
                         
                         if done:
                             break
