@@ -157,7 +157,9 @@ class DBEnvironment(Environment):
             msg = "Target optimization reached."
 
         self.conn.commit()
-        return self.get_observation(reward=reward, message=msg, done=done)
+        # Clamp reward natively before API response to strictly guarantee 0.0 - 1.0 bounds
+        clamped_reward = max(0.0, min(1.0, float(reward)))
+        return self.get_observation(reward=clamped_reward, message=msg, done=done)
 
     @property
     def state(self) -> DBState: return self._state
