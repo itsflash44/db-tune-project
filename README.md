@@ -241,15 +241,15 @@ streamlit run ui_demo.py
 **Expected output:**
 ```
 [START] task=easy env=db_tune_env model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action=CREATE:department reward=1.50 done=true error=null
-[END] success=true steps=1 score=1.000 rewards=1.50
+[STEP] step=1 action=CREATE:department reward=1.00 done=true error=null
+[END] success=true steps=1 score=1.000 rewards=1.00
 [START] task=medium env=db_tune_env model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action=CREATE:location reward=1.50 done=true error=null
-[END] success=true steps=1 score=1.000 rewards=1.50
+[STEP] step=1 action=CREATE:location reward=1.00 done=true error=null
+[END] success=true steps=1 score=1.000 rewards=1.00
 [START] task=hard env=db_tune_env model=Qwen/Qwen2.5-72B-Instruct
 [STEP] step=1 action=DROP:idx_useless reward=0.20 done=false error=null
-[STEP] step=2 action=CREATE:department reward=1.50 done=true error=null
-[END] success=true steps=2 score=1.000 rewards=0.20,1.50
+[STEP] step=2 action=CREATE:department reward=1.00 done=true error=null
+[END] success=true steps=2 score=1.000 rewards=0.20,1.00
 
 [DEBUG] FINAL SCORE: 3.00 / 3.00
 [DEBUG] TIER: SOVEREIGN_AI
