@@ -276,11 +276,11 @@ streamlit run ui_demo.py
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/` | GET | Health check |
-| `/state` | GET | Current episode state |
-| `/query` | GET | Active SQL query being optimized |
-| `/reset?task_name=` | POST | Start new episode (easy/medium/hard) |
-| `/action` | POST | Submit DBA action, receive observation + reward |
+| `/` | GET | Renders the Agent Overview Web UI |
+| `/raw_readme` | GET | Returns the raw Markdown for the Web UI |
+| `/query` | GET | Fetches the active SQL query being optimized |
+| `/reset` | POST | OpenEnv Space validation healthcheck |
+| `/ws` | WEBSOCKET | Core OpenEnv protocol endpoint (handles `reset`, `step`, `state`) |
 
 ---
 
