@@ -84,6 +84,14 @@ During development, we discovered a profound insight into LLM reinforcement lear
 ![Full Convergence](reward_curve_200.png)
 *When scaled to 200 episodes, the true reality of Reinforcement Learning emerges. The 1.5B model learns to repeatedly hit the 90-cost reduction target, but because our budget constraints are mathematically absolute, the small model struggles to permanently stabilize the complex `DROP → CREATE` conditional logic. It oscillates heavily, triggering the `needs more training` flag. **This perfectly justifies our dual-model architecture:** we use the lightweight 1.5B model for high-throughput RL exploration, while our `inference.py` script routes critical production traffic to the 72B model, which solves the strict environment flawlessly.*
 
+#### 1.5B GRPO Training Summary (200 Episodes)
+| Training Phase | Step Range | Behavior Observed | Average Reward | Cost Unit Reduction |
+|----------------|------------|-------------------|----------------|---------------------|
+| **Initial Exploration** | 0 - 50 | Completely random actions, frequent syntax errors. Learns valid column names by failing. | Highly Negative | 0 - 45 |
+| **Partial Convergence** | 50 - 120 | Consistently hits the `CREATE` target. Succeeds easily on Easy/Medium tasks. | Oscillating | Often hits 90 |
+| **Constraint Struggle** | 120 - 200 | Fails to stabilize on Hard tasks. Often forgets `DROP` before `CREATE`, hitting the hard storage penalty. | Moderate / High Variance | 0 or 90 |
+
+#### Production Agent Evaluation (72B)
 | Episode | Task | Query Cost | Reward | Key Action |
 |---------|------|-----------|--------|-----------|
 | 1 | Easy | 100.0 | -0.40 | CREATE dept *(invalid column — learns fast)* |
@@ -92,7 +100,7 @@ During development, we discovered a profound insight into LLM reinforcement lear
 | 20 | Hard | 10.0 | +1.50 | DROP idx_useless → CREATE department |
 | **Final** | **All** | **10.0** | **+3.00/3.00** | **Optimal steps per task** |
 
-*Note: The table above reflects the step-by-step evaluation of the **production 72B agent** (`inference.py`), not the 1.5B training run in the chart above.*
+*Note: The table above reflects the step-by-step evaluation of the **production 72B agent** (`inference.py`), not the 1.5B training run in the chart and table prior.*
 
 > The agent discovered that `dept` was invalid *by failing*, then corrected itself — without any hint about valid column names being in its training data.
 
