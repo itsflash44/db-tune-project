@@ -78,6 +78,11 @@ def get_active_query(task: Optional[str] = "easy"):
     tmp.current_task = task
     return {"query": tmp.get_active_query()}
 
+@app.post("/reset")
+def reset_environment(data: dict = {}):
+    # Dummy reset for basic HTTP healthcheck (websocket uses its own reset)
+    return {"status": "ok"}
+
 
 class _DBActionBody(BaseModel):
     command:    str
@@ -162,6 +167,9 @@ async def websocket_endpoint(websocket: WebSocket):
             pass
 
 
-if __name__ == "__main__":
+def main():
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=7860)
+
+if __name__ == "__main__":
+    main()
