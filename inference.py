@@ -4,10 +4,58 @@ import json
 import time
 import urllib.request
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from openai import OpenAI
-from client import DBEnvClient, DBAction
+from openenv.core.env_server import Action, Observation, State
+from openenv.core.env_client import EnvClient
+from openenv.core.client_types import StepResult
+
+class DBAction(Action):
+    command: str
+    table_name: str
+    column_name: str
+
+class DBObservation(Observation):
+    current_indices: List[str]
+    query_cost: float
+    storage_used: float
+    storage_budget: float
+    message: str
+
+class DBState(State):
+    max_steps: int = 10
+
+class DBEnvClient(EnvClient[DBAction, DBObservation, DBState]):
+    def _step_payload(self, action: DBAction) -> dict:
+        return {
+            "command": action.command,
+            "table_name": action.table_name,
+            "column_name": action.column_name
+        }
+
+    def _parse_result(self, payload: dict) -> StepResult:
+        obs_data = payload.get("observation", {})
+        return StepResult(
+            observation=DBObservation(
+                done=payload.get("done", False),
+                reward=payload.get("reward", 0.0),
+                current_indices=obs_data.get("current_indices", []),
+                query_cost=obs_data.get("query_cost", 0.0),
+                storage_used=obs_data.get("storage_used", 0.0),
+                storage_budget=obs_data.get("storage_budget", 0.0),
+                message=obs_data.get("message", ""),
+            ),
+            reward=payload.get("reward", 0.0),
+            done=payload.get("done", False),
+        )
+
+    def _parse_state(self, payload: dict) -> DBState:
+        return DBState(
+            episode_id=payload.get("episode_id"),
+            step_count=payload.get("step_count", 0),
+            max_steps=payload.get("max_steps", 10),
+        )
 
 # --- CONFIGURATION ---
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")

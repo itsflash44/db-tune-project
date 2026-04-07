@@ -109,7 +109,8 @@ During development, we discovered a profound insight into LLM reinforcement lear
 We rigorously verified the project to conform to all Hackathon and OpenEnv requirements:
 * **`0.0` - `1.0` Reward Bounding:** Both `inference.py` and the OpenEnv API server (`server/environment.py`) strictly clamp `reward` outputs between 0.0 and 1.0.
 * **REST & WebSocket Endpoints:** `server/app.py` exposes both the essential `POST /reset` endpoint (HTTP 200) for space pinging and completely standard OpenEnv WebSocket sockets.
-* **Inference Pipeline:** `inference.py` uses `API_BASE_URL` and `HF_TOKEN`, explicitly relies on the standard `openai` Python client, and emits strict `[START]`, `[STEP]`, and `[END]` evaluation logs directly mapped to standard testing tools.
+* **Inference Pipeline & Architecture:** `inference.py` is placed directly in the root directory. Crucially, it is completely self-contained (all custom openenv classes like `DBEnvClient` and `DBAction` are inlined) so it mathematically cannot fail with `ModuleNotFoundError` when the Hackathon Phase 2 pipeline isolates it into `/tmp/workspace/inference.py`.
+* **API Constraints:** We use `API_BASE_URL`, `MODEL_NAME`, and `HF_TOKEN`, explicitly rely on the standard `openai` Python client, and encapsulate all LLM interactions in `try/except` blocks to prevent unhandled evaluation timeouts. It correctly outputs strict `[START]`, `[STEP]`, and `[END]` evaluation logs mapped natively to Hackathon parsers.
 * **Infra Constraints:** By separating the training logic (local/Colab) from inference (Hugging Face via API), our submission runs cleanly under the strict `2 vCPU / 8GB RAM` limit and finishes in under 20 minutes.
 
 > The agent discovered that `dept` was invalid *by failing*, then corrected itself — without any hint about valid column names being in its training data.
