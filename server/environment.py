@@ -94,7 +94,7 @@ class DBEnvironment(Environment):
             cursor.execute("CREATE INDEX idx_useless ON users(active_status)")
             self.conn.commit()
 
-        return self.get_observation(reward=0.0, message=f"Task {task.upper()} initialized.")
+        return self.get_observation(reward=0.001, message=f"Task {task.upper()} initialized.")
 
     def get_observation(self, reward: float, message: str, done: bool = False) -> DBObservation:
         """Helper to standardize return types for the Sovereign API."""
@@ -157,8 +157,8 @@ class DBEnvironment(Environment):
             msg = "Target optimization reached."
 
         self.conn.commit()
-        # Clamp reward natively before API response to strictly guarantee 0.0 - 1.0 bounds
-        clamped_reward = max(0.0, min(1.0, float(reward)))
+        # Clamp reward natively before API response to strictly guarantee (0.0, 1.0) open bounds limit
+        clamped_reward = max(0.001, min(0.999, float(reward)))
         return self.get_observation(reward=clamped_reward, message=msg, done=done)
 
     @property
