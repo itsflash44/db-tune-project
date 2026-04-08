@@ -224,7 +224,7 @@ def main():
                             break
 
                     except Exception as e:
-                        log_step(step=step, action="ERROR", reward=0.0, done=True, error=str(e))
+                        log_step(step=step, action="ERROR", reward=0.001, done=True, error=str(e))
                         break
                         
                 success = obs.query_cost <= 10.0
@@ -235,7 +235,8 @@ def main():
             finally:
                 # --- [END]
                 total_reward = sum(rewards)
-                score = min(max(total_reward / MAX_REWARD_PER_TASK, 0.0), 1.0)
+                # The Hackathon validator has a strict open interval rule (0, 1) preventing 0.0 and 1.0
+                score = min(max(total_reward / MAX_REWARD_PER_TASK, 0.001), 0.999)
                 log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
             grand_total += score
