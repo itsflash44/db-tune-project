@@ -250,8 +250,8 @@ def main():
             }
 
     # --- Final summary (non-scored, for human readers) -----------
-    print(f"\n[DEBUG] FINAL SCORE: {grand_total:.2f} / {max_possible:.2f}", flush=True)
-    tier = "SOVEREIGN_AI" if grand_total >= 3.0 else "AUTOMATION_VERIFIED"
+    print(f"\n[DEBUG] FINAL SCORE: {grand_total:.3f} / {max_possible:.2f}", flush=True)
+    tier = "SOVEREIGN_AI" if grand_total >= 2.99 else "AUTOMATION_VERIFIED"
     print(f"[DEBUG] TIER: {tier}", flush=True)
 
     report = {

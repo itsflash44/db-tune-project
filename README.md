@@ -94,11 +94,11 @@ During development, we discovered a profound insight into LLM reinforcement lear
 #### Production Agent Evaluation (72B)
 | Episode | Task | Query Cost | Reward | Key Action |
 |---------|------|-----------|--------|-----------|
-| 1 | Easy | 100.0 | 0.00 | CREATE dept *(invalid column — learns fast)* |
-| 5 | Easy | 10.0 | +1.00 | CREATE department *(target hit!)* |
-| 12 | Medium | 10.0 | +1.00 | CREATE location |
-| 20 | Hard | 10.0 | +1.00 | DROP idx_useless → CREATE department |
-| **Final** | **All** | **10.0** | **+3.00/3.00** | **Optimal steps per task** |
+| 1 | Easy | 100.0 | 0.001 | CREATE dept *(invalid column — learns fast)* |
+| 5 | Easy | 10.0 | +0.999 | CREATE department *(target hit!)* |
+| 12 | Medium | 10.0 | +0.999 | CREATE location |
+| 20 | Hard | 10.0 | +0.999 | DROP idx_useless → CREATE department |
+| **Final** | **All** | **10.0** | **+2.997/3.00** | **Optimal steps per task** |
 
 *Note: The table above reflects the step-by-step evaluation of the **production 72B agent** (`inference.py`), which uses strictly capped rewards [0.0 - 1.0] as per Hackathon Validation rules, unlike the internal 1.5B GRPO training chart prior.*
 
@@ -252,17 +252,17 @@ streamlit run ui_demo.py
 **Expected output:**
 ```
 [START] task=easy env=db_tune_env model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action=CREATE:department reward=1.00 done=true error=null
-[END] success=true steps=1 score=1.000 rewards=1.00
+[STEP] step=1 action=CREATE:department reward=0.99 done=true error=null
+[END] success=true steps=1 score=0.999 rewards=0.99
 [START] task=medium env=db_tune_env model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action=CREATE:location reward=1.00 done=true error=null
-[END] success=true steps=1 score=1.000 rewards=1.00
+[STEP] step=1 action=CREATE:location reward=0.99 done=true error=null
+[END] success=true steps=1 score=0.999 rewards=0.99
 [START] task=hard env=db_tune_env model=Qwen/Qwen2.5-72B-Instruct
 [STEP] step=1 action=DROP:idx_useless reward=0.20 done=false error=null
-[STEP] step=2 action=CREATE:department reward=1.00 done=true error=null
-[END] success=true steps=2 score=1.000 rewards=0.20,1.00
+[STEP] step=2 action=CREATE:department reward=0.99 done=true error=null
+[END] success=true steps=2 score=0.999 rewards=0.20,0.99
 
-[DEBUG] FINAL SCORE: 3.00 / 3.00
+[DEBUG] FINAL SCORE: 2.997 / 3.00
 [DEBUG] TIER: SOVEREIGN_AI
 [DEBUG] Results exported to results.json
 ```
@@ -276,7 +276,7 @@ streamlit run ui_demo.py
 | **GRPO over PPO** | No value network needed — computes advantages from reward groups directly |
 | **1.5B for training, 72B for production** | Training fits on free Colab GPU; production uses best available reasoning |
 | **LoRA r=16** | 3.6M trainable params vs 1.5B total — full expressiveness at minimal memory |
-| **3.00/3.00 Max Score** | The agent flawlessly executes the curriculum, correctly identifying and dropping the budget-violating index before creation on the hardest tier. |
+| **2.997/3.00 Max Score** | The agent flawlessly executes the curriculum, correctly identifying and dropping the budget-violating index before creation on the hardest tier. |
 | **Qwen2.5 family** | Superior JSON instruction-following vs GPT-equivalent models at same size |
 
 ---
