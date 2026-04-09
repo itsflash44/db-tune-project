@@ -158,7 +158,7 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
 
     # Build dataset
-    task_budgets = {'easy': 10.0, 'medium': 3.0, 'hard': 2.0}
+    task_budgets = {'easy': 10.0, 'medium': 3.0, 'hard': 1.0}
     tasks = list(itertools.islice(itertools.cycle(['easy', 'medium', 'hard']), NUM_EPISODES))
 
     prompts = []

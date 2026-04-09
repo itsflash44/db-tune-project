@@ -210,8 +210,8 @@ def main():
                         done = result.done
                         error = None if not obs.message or obs.message == "Target optimization reached." else obs.message
 
-                        # Clamp reward to 0.0-1.0 strictly for hackathon compliance
-                        log_reward = min(max(reward, 0.0), 1.0)
+                        # Clamp reward to strict open interval (0,1) for hackathon compliance
+                        log_reward = min(max(reward, 0.001), 0.999)
                         
                         rewards.append(log_reward)
                         steps_taken = step
