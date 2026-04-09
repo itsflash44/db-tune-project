@@ -189,7 +189,7 @@ We scrapped it and built the procedural engine. Here's what happened.
 
 ### Procedural Training: 200 Episodes on ∞ Unique Scenarios
 
-![Procedural GRPO Training](reward_curve*.png)
+![Procedural GRPO Training](reward_curve_procedural.png)
 
 The left graph shows reward per step; the right shows actual query cost reduction per step.
 
@@ -327,9 +327,11 @@ db_tune_project/
 │   ├── app.py                # FastAPI server + /scenario_sample endpoint
 │   └── environment.py        # Procedural generation engine (5 schemas)
 ├── Dockerfile                # Production container (port 7860)
-├── reward_curve.png          # Training curves (regenerate with train.py)
-├── reward_curve_strict.png
-└── reward_curve_200.png
+├── reward_curve.png              # v1 Fixed env (Phase 1 — memorization)
+├── reward_curve_strict.png       # v1 Strict constraints (Phase 2)
+├── reward_curve_200.png          # v1 Full convergence (Phase 3)
+├── reward_curve_procedural.png   # v2 Procedural env (current — generalization)
+└── results.json                  # Auto-generated score report
 ```
 
 ---
