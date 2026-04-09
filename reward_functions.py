@@ -30,6 +30,7 @@ def reward_cost_reduction(state: StepState) -> float:
     +1.0  — cost dropped but not yet at target
      0.0  — cost unchanged (e.g. FINISH with cost already low)
     -0.5  — cost unchanged and agent didn't FINISH
+    -1.0  — premature FINISH (gave up when work is needed)
     -1.0  — cost increased (agent made things worse)
     """
     if state.new_cost <= 10.0 and state.prev_cost > 10.0:
@@ -38,6 +39,8 @@ def reward_cost_reduction(state: StepState) -> float:
         return 1.0   # Progress — cost dropped
     elif state.command == "FINISH" and state.new_cost <= 10.0:
         return 0.0   # Already done, graceful finish
+    elif state.command == "FINISH" and state.new_cost > 10.0:
+        return -1.0  # Premature FINISH — giving up when work is needed
     elif state.new_cost == state.prev_cost:
         return -0.5  # No progress — wasted a step
     else:

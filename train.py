@@ -93,25 +93,45 @@ def dba_reward(prompts, completions, **kwargs):
                 task = t
                 break
 
-        # Fresh environment for evaluation
-        env = DBEnvironment()
-        obs = get_obs(env.reset(task=task))
-        prev_cost = float(obs.get('query_cost', 100.0))
+        # ── Format reward: gradient signal for partial correctness ──
+        # Even garbage outputs get differentiated, preventing zero-advantage
+        # rounds that stall GRPO (critical for round 1 cold-start)
+        format_reward = 0.0
+        if '{' in completion and '}' in completion:
+            format_reward += 0.05   # At least attempted JSON structure
+        if re.search(r'"command"', completion, re.IGNORECASE):
+            format_reward += 0.05   # Knows the key field name
 
         # Parse JSON
+        parse_ok = False
         try:
             m = re.search(r'\{[^{}]*\}', completion, re.DOTALL)
             a = json.loads(m.group()) if m else {}
+            if 'command' in a:
+                parse_ok = True
+                format_reward += 0.1  # Fully valid JSON with command key
         except Exception:
             a = {}
+
+        # Failed parse: DISTINCT penalty from valid actions
+        # Prevents all-identical rewards when model is untrained
+        if not parse_ok:
+            rewards.append(-0.8 + format_reward)
+            cost_deltas.append(0.0)
+            continue
 
         cmd = a.get('command', 'FINISH').upper()
         col = str(a.get('column_name', '')).strip()
 
         if cmd not in ('CREATE', 'DROP', 'FINISH'):
-            rewards.append(-0.5)
+            rewards.append(-0.5 + format_reward)
             cost_deltas.append(0.0)
             continue
+
+        # Fresh environment for evaluation (only when we have a valid action)
+        env = DBEnvironment()
+        obs = get_obs(env.reset(task=task))
+        prev_cost = float(obs.get('query_cost', 100.0))
 
         action = DBAction(command=cmd, table_name='users', column_name=col)
         step_raw = env.step(action)
@@ -124,7 +144,7 @@ def dba_reward(prompts, completions, **kwargs):
             storage_budget=float(new_obs.get('storage_budget', 10)),
             command=cmd,
         )
-        r = reward_total(state)
+        r = reward_total(state) + format_reward
         rewards.append(r)
         cost_deltas.append(prev_cost - new_cost)
 
