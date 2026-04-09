@@ -1,3 +1,68 @@
 name: db_tune_env
-version: "1.0.0"
-description: "An autonomous database optimization environment where an agent acts as a Senior DBA, optimizing SQL queries by creating indices within a strict storage budget."
+version: "2.0.0"
+description: >
+  A procedurally-generated database optimization environment where an AI agent
+  acts as an autonomous DBA. Each reset() creates a UNIQUE scenario with random
+  table schemas, data distributions, SQL queries, storage constraints, and
+  pre-existing (often useless) indices. The agent must generalize optimization
+  strategies across infinite scenario variations — memorizing fixed answers is
+  impossible.
+
+tasks:
+  - name: easy
+    description: >
+      Single table, simple WHERE query, generous storage budget.
+      Random table from pool of 5 schemas. 0-1 pre-existing useless indices.
+      Optimal solution: 1-2 steps.
+    max_steps: 5
+
+  - name: medium
+    description: >
+      Single table, multi-condition WHERE or index cleanup scenario.
+      Moderate budget, 1-3 pre-existing useless indices.
+      Agent must choose between multiple indexing strategies.
+      Optimal solution: 2-4 steps.
+    max_steps: 8
+
+  - name: hard
+    description: >
+      Two-table JOIN or complex cleanup under tight budget.
+      2-4 pre-existing useless indices filling storage.
+      Agent must DROP useless indices before CREATEing optimal ones.
+      Requires multi-step reasoning about query plans and storage.
+      Optimal solution: 3-6 steps.
+    max_steps: 10
+
+action_space:
+  command: "CREATE | CREATE_COMPOSITE | DROP | ANALYZE | FINISH"
+  table_name: "Target table (from table_schemas in observation)"
+  column_name: "Target column, index name, or comma-separated columns for composite"
+
+observation_space:
+  current_indices: "List of current index names"
+  query_cost: "Current query execution cost from EXPLAIN QUERY PLAN"
+  storage_used: "Number of indices currently in use"
+  storage_budget: "Maximum allowed indices"
+  message: "Human-readable feedback from last action"
+  target_query: "The SQL query being optimized"
+  table_schemas: "Map of table name → column list"
+  query_plan: "Raw EXPLAIN QUERY PLAN output string"
+  row_counts: "Map of table name → row count"
+  index_details: "List of index metadata (name, table, columns)"
+  valid_actions: "List of valid table.column combinations for CREATE"
+  difficulty: "Current difficulty tier"
+  scenario_id: "Unique identifier for this procedural scenario"
+
+reward:
+  description: >
+    Five-signal reward combining cost reduction (70%), storage safety (15%),
+    step efficiency (10%), and action precision (5%), plus format bootstrapping
+    for GRPO cold-start. Rewards clamped to open interval (0.001, 0.999).
+  range: [0.001, 0.999]
+
+tables:
+  - employees (department, salary, location, active, hire_date, manager_id)
+  - orders (customer_id, product_id, status, region, order_date, amount)
+  - products (category, price, supplier_id, active, stock_qty)
+  - transactions (account_id, tx_type, merchant, category, tx_date, amount)
+  - logs (user_id, action, module, severity, log_ts)
