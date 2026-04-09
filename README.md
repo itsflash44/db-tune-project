@@ -179,73 +179,117 @@ Creates reward variance even when all model outputs are garbage:
 
 ---
 
-## 📊 Training Results: From Fixed Puzzles to Procedural Generalization
+## 📊 Training Results: The 4-Phase Journey from Memorization to Generalization
 
-### The Journey: Why We Redesigned the Environment
+We trained NOVA across **4 iterative phases** — each one exposing a flaw in the previous design, driving us to build a harder, more honest environment. The full progression is shown below.
 
-Our initial v1 environment had 3 fixed tasks with predetermined answers. Training on it produced a smooth positive reward curve — but this was a **false signal**. The model simply memorized `"CREATE INDEX ON department"` and repeated it. A lookup table scored the same as 200 episodes of RL training.
+---
 
-We scrapped it and built the procedural engine. Here's what happened.
+### Phase 1: Unconstrained Budget — The Illusion of Success (v1)
 
-### Procedural Training: 200 Episodes on ∞ Unique Scenarios
+![Phase 1 — Unconstrained](reward_curve.png)
 
-![Procedural GRPO Training](reward_curve_procedural.png)
+Our first environment had 3 fixed tasks with a generous storage budget (`2.0` for hard). The agent quickly spiked to a positive reward — but it was **fake learning**. It discovered that blindly `CREATE INDEX ON department` always worked, without ever needing to `DROP` anything. The reward went up, but the agent learned nothing about index strategy.
+
+> **Lesson:** If the environment doesn't punish shortcuts, the agent will exploit every loophole to avoid hard work.
+
+---
+
+### Phase 2: Strict Constraints — Agent Breaks Down (v1)
+
+![Phase 2 — Strict Budget](reward_curve_strict.png)
+
+We patched the hard tier budget to `1.0` and injected a useless index at full capacity. The agent's old cheating trick immediately crashed — reward plummeted into the negative zone (steps 1-20). But forced to confront the constraint, the agent began exploring `DROP → CREATE` sequences, showing a sustained upward climb at the right edge.
+
+> **Lesson:** Strict constraints expose whether the agent is really learning or just memorizing. The initial crash was painful but necessary.
+
+---
+
+### Phase 3: Full 200-Episode Training — Memorization Exposed (v1)
+
+![Phase 3 — 200 Episodes Fixed Env](reward_curve_200.png)
+
+We trained for 200 full episodes on the 3-task fixed environment. The result was revealing:
+- The model hit the 90-point cost reduction target with increasing density after step 120
+- But the reward oscillated wildly — the model had memorized the easy/medium answers but couldn't reliably stabilize on the hard `DROP → CREATE` sequence
+- **Critical flaw:** There were only **3 fixed solutions** to memorize. A lookup table would score identically.
+
+| What it looked like | What was actually happening |
+|---|---|
+| Reward spikes clustering at +1.0 | Model memorized `"CREATE INDEX ON department"` |
+| Wild oscillation on hard tasks | Model couldn't reliably chain `DROP → CREATE` |
+| Positive mean reward (+0.3) | Memorization of 3 answers, not strategy learning |
+
+> **Lesson:** A positive mean on a fixed environment doesn't prove RL learning — it proves memorization. We needed an environment where memorization is **impossible**.
+
+---
+
+### Phase 4: Procedural Generation — Genuine Generalization (v2) ⭐
+
+![Phase 4 — Procedural GRPO Training](reward_curve_procedural.png)
+
+We redesigned the environment from scratch. Every `reset()` now generates a **unique scenario** — random table from 5 schemas, random query, random constraints, random useless indices. The 3-answer lookup table is worthless here. **The agent must actually learn general DBA strategies.**
+
+#### Reading the Curves
 
 The left graph shows reward per step; the right shows actual query cost reduction per step.
 
-#### Why the Mean Reward is Negative — and Why That's the Point
+**The mean reward hovers around −0.15.** This is not failure — it is the mathematically expected result of a genuinely hard environment.
 
-The mean reward hovers around **−0.15**. At first glance, this looks like the model is failing. **It's not.** It's proof the environment is genuinely hard.
+Here's why. Each scenario picks a random table (5 options) with 5-6 indexable columns. The agent must identify the correct column from the WHERE clause:
 
-Here's the math. In the procedural environment, each reset generates a random table from 5 schemas, each with 5-6 indexable columns. The agent must identify the one correct column from the WHERE clause. For a 1.5B model learning from scratch:
-
-| Action | Probability (untrained) | Reward | Contribution |
-|--------|------------------------|--------|-------------|
-| Correct column (cost drops 100→10) | ~15-20% | **+1.05** | +0.16 to +0.21 |
-| Wrong column (no cost change) | ~60-70% | **−0.35** | −0.21 to −0.25 |
+| Action | Probability | Reward | Weighted Contribution |
+|--------|------------|--------|----------------------|
+| Correct column (100→10) | ~15-20% | **+1.05** | +0.16 to +0.21 |
+| Wrong column (no change) | ~60-70% | **−0.35** | −0.21 to −0.25 |
 | Parse failure / invalid | ~15-20% | **−0.60** | −0.09 to −0.12 |
 | **Expected mean** | | | **≈ −0.10 to −0.15** |
 
-**A negative mean is the mathematically inevitable result of a genuinely hard environment.** If the mean were positive, it would mean the environment is too easy — exactly the problem we fixed from v1.
+> **A positive mean on a trivial environment tells you nothing.** A negative mean on a hard environment with clearly increasing success density tells you the model is learning transferable strategies.
 
-> In the old fixed environment, the model memorized 3 answers and hit +0.8 mean reward. That wasn't learning — it was a lookup table. Here, even reaching **0.0 mean** would require the model to correctly identify the right column in ~35% of cases across 5 different table schemas. That's real generalization.
+#### The Right Graph Tells the Real Story
 
-#### What the Data Actually Shows: Clear Learning Signal
+Focus on the **cost reduction** graph (right panel). This is ground truth — did the agent actually optimize the query?
 
-Focus on the **right graph** (Query Cost Reduction per Step). This is the ground truth — did the agent actually reduce query cost?
-
-| Phase | Steps | Cost Reduction Hits | What's Happening |
+| Training Phase | Steps | Cost Reduction Hits | Interpretation |
 |-------|-------|-------------------|-----------------|
-| **Cold Start** | 0–25 | 2-3 scattered hits | Random exploration, format reward bootstrapping |
-| **Quiet Phase** | 25–100 | Sparse, isolated | Model learning JSON structure + basic commands |
+| **Cold Start** | 0–25 | 2-3 scattered | Random exploration, format reward bootstrapping |
+| **Quiet Learning** | 25–100 | Sparse, isolated | Model learning JSON structure + basic commands |
 | **Breakthrough** | 100–140 | Clustering begins | Model discovers "read WHERE → index that column" |
 | **Generalization** | 140–200 | **Dense clusters** | Consistent hits across different table schemas |
 
-The spike density between steps **140–200** is dramatically higher than steps **0–50**. The model went from accidentally stumbling into correct actions to **reliably identifying the optimization target** across employees, orders, products, transactions, and logs tables.
+The spike density between steps **140–200** is dramatically higher than steps **0–50**. The model went from accidentally stumbling into correct actions to **reliably identifying the optimization target** across employees, orders, products, transactions, and logs.
 
-#### Left Graph: Reward Spikes Tell the Story
+#### Reward Spikes: Increasing Frequency
 
-- Steps 0–50: Reward spikes to +1.0 occur ~2 times (lucky guesses)
-- Steps 100–150: +1.0 spikes occur ~5 times (pattern emerging)
-- Steps 150–200: +1.0 spikes become **the most frequent** they've ever been
+- Steps 0–50: +1.0 spikes occur ~2 times (lucky guesses)
+- Steps 100–150: +1.0 spikes occur ~5 times (strategy emerging)
+- Steps 150–200: +1.0 spikes are **the most frequent** they've ever been
 
-The rolling average (white line) shows a slow but steady upward trend — climbing from ~−0.25 early on to ~−0.10 by step 200. For a 1.5B model facing infinite unique scenarios, this trajectory indicates genuine policy improvement.
+The rolling average climbs from ~−0.25 to ~−0.10 over 200 steps — a steady upward trajectory.
 
-#### Comparison: Fixed vs. Procedural Environments
+---
 
-| Metric | Fixed Env (v1) | Procedural Env (v2) |
-|--------|---------------|-------------------|
-| Mean reward at step 200 | +0.3 (high, but via memorization) | −0.10 (low, but via generalization) |
-| Unique scenarios encountered | 3 | 200 (each step is new) |
-| Cost reduction hit rate | ~40% (but only 3 possible answers) | ~20-25% (across 5 schemas × 5-6 cols) |
+### Side-by-Side: Why v2 is Harder but Better
+
+| Metric | Fixed Env (v1, Phases 1-3) | Procedural Env (v2, Phase 4) |
+|--------|---------------------------|------------------------------|
+| Mean reward | +0.3 ✅ (looks great) | −0.10 (looks worse) |
+| Unique scenarios | 3 (memorizable) | 200+ (impossible to memorize) |
+| Cost reduction hits | ~40% (but always same 3 answers) | ~20-25% (across 5 schemas × 6 cols) |
 | Does the model generalize? | ❌ No — memorizes 3 strings | ✅ Yes — learns "index the WHERE column" |
-| Reward variance | Low (same 3 tasks repeat) | High (every scenario is unique) |
+| Proves RL is working? | ❌ A lookup table scores the same | ✅ Only genuine learning can improve |
 
-### Key Insight for Judges
+### What the 1.5B Model Learned (in 200 Steps)
 
-**A positive mean on a trivial environment tells you nothing.** A negative mean on a hard environment with clearly increasing success density tells you the model is **learning transferable strategies** — which is the entire point of RL.
+The model hasn't mastered DBA optimization — but it has demonstrably learned:
 
-The 1.5B model hasn't mastered DBA optimization in 200 steps — but it has demonstrably learned that (1) output must be valid JSON, (2) the command should be CREATE, (3) the column should come from the WHERE clause. For a model that started with zero knowledge of databases, trained on randomly-generated scenarios it has never seen before, this is genuine reinforcement learning.
+1. ✅ Output must be valid JSON (format reward → structured output)
+2. ✅ The command should be `CREATE` (not random strings)
+3. ✅ The column should come from the `WHERE` clause (not random columns)
+4. ✅ These strategies transfer across employees, orders, products, transactions, and logs
+
+For a 1.5B parameter model that started with zero knowledge of databases, trained on randomly-generated scenarios it has never seen before — this is genuine reinforcement learning, not memorization.
 
 ---
 
