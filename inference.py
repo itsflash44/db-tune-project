@@ -143,6 +143,7 @@ OUTPUT: ONLY valid JSON. No markdown. No explanation outside JSON."""
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def log_start(task: str, env: str, model: str) -> None:
+    """Exact hackathon format — do NOT add extra fields."""
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
@@ -233,11 +234,12 @@ def main():
             success = False
             obs = None
 
-            log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
-
             try:
                 result = sync_env.reset(task=task_name)
                 obs = result.observation
+                log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
+                # UI-only debug line — ignored by hackathon validator
+                print(f"[DEBUG] scenario={obs.scenario_id} difficulty={obs.difficulty} tables={list(obs.table_schemas.keys())}", flush=True)
 
                 conversation_history = [{"role": "system", "content": SYSTEM_PROMPT}]
 
